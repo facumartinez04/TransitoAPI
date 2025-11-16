@@ -143,16 +143,22 @@
         {
             using var client = new HttpClient();
 
-            var url = "https://transitoapi.fmartinez.space/api/Toll/cabinas";
+            var url = "https://fun-bernetta-johannson-systems-v2-ba75677f.koyeb.app/api/toll_gates?order_dir=asc";
 
             var response = await client.GetAsync(url);
-            response.EnsureSuccessStatusCode();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var err = await response.Content.ReadAsStringAsync();
+                Console.WriteLine("❌ Error API Cabinas: " + err);
+                return new List<CabinaPeaje>();
+            }
 
             var json = await response.Content.ReadAsStringAsync();
 
-            var cabinas = System.Text.Json.JsonSerializer.Deserialize<List<CabinaPeaje>>(json);
+            var apiResponse = System.Text.Json.JsonSerializer.Deserialize<ApiCabinasResponse>(json);
 
-            return cabinas ?? new List<CabinaPeaje>();
+            return apiResponse?.Data ?? new List<CabinaPeaje>();
         }
 
 
@@ -161,7 +167,6 @@
             using var client = new HttpClient();
 
             var cabinas = await ObtenerCabinasAsync();
-
             var todosLosTransitos = new List<Transitotat>();
 
             foreach (var cabina in cabinas)
@@ -174,7 +179,8 @@
 
                 var json = await response.Content.ReadAsStringAsync();
 
-                var apiResponse = JsonConvert.DeserializeObject<ApiResponse<Transitotat>>(json);
+                var apiResponse =
+                    System.Text.Json.JsonSerializer.Deserialize<ApiResponse<Transitotat>>(json);
 
                 if (apiResponse?.Data != null)
                     todosLosTransitos.AddRange(apiResponse.Data);
@@ -191,13 +197,20 @@
                 .Take(100)
                 .ToList();
 
+            decimal GetVelocidad(Transitotat t)
+            {
+                if (string.IsNullOrWhiteSpace(t.VelocidadKmh)) return 0;
+                if (decimal.TryParse(t.VelocidadKmh, out var v)) return v;
+                return 0;
+            }
+
             var estadisticas = new EstadisticasTransito
             {
                 TotalTransitos = ultimos100.Count,
 
                 TransitosPorCabina = ultimos100
-                    .GroupBy(t => t.IdCabina)
-                    .ToDictionary(g => g.Key, g => g.Count()),
+                .GroupBy(t => Guid.Parse(t.IdCabina))
+                .ToDictionary(g => g.Key, g => g.Count()),
 
                 TransitosPorDia = ultimos100
                     .GroupBy(t => DateTime.Parse(t.FechaOcurrencia).ToString("yyyy-MM-dd"))
@@ -208,11 +221,11 @@
                     .ToDictionary(g => g.Key, g => g.Count()),
 
                 VelocidadPromedioPorCabina = ultimos100
-                    .Where(t => t.VelocidadKmh.HasValue)
-                    .GroupBy(t => t.IdCabina)
+                    .Where(t => !string.IsNullOrWhiteSpace(t.VelocidadKmh))
+                    .GroupBy(t => Guid.Parse(t.IdCabina))
                     .ToDictionary(
                         g => g.Key,
-                        g => g.Average(t => t.VelocidadKmh!.Value)
+                        g => g.Average(t => GetVelocidad(t))
                     ),
 
                 TransitosPorTipoVehiculo = ultimos100
@@ -222,6 +235,7 @@
 
             return estadisticas;
         }
+
     }
 }
 
