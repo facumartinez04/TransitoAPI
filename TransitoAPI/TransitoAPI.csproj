@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="NetMQ" Version="4.0.2.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 

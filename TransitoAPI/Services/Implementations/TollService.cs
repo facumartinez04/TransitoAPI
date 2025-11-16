@@ -1,6 +1,8 @@
 ﻿namespace TransitoAPI.Services.Implementations
 {
+    using Newtonsoft.Json;
     using System.Net.Http.Json;
+    using System.Text.Json.Serialization;
     using TransitoAPI.Models;
     using TransitoAPI.Services.Interfaces;
 
@@ -140,24 +142,39 @@
 
         public async Task<EstadisticasTransito> ObtenerEstadisticasAsync()
         {
-            var transitos = await ObtenerTransitosAsync();
+            using var client = new HttpClient();
+
+            var url = "https://fun-bernetta-johannson-systems-v2-ba75677f.koyeb.app/api/transits?order_dir=asc&gate_id=11111111-1111-1111-1111-111111111111";
+
+            var response = await client.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+
+            var transitos = JsonConvert.DeserializeObject<List<Transito>>(json) ?? new List<Transito>();
+
+            var ultimos100 = transitos
+                .OrderByDescending(t => DateTime.Parse(t.FechaOcurrencia))
+                .Take(100)
+                .ToList();
 
             var estadisticas = new EstadisticasTransito
             {
-                TotalTransitos = transitos.Count,
-                TransitosPorCabina = transitos
+                TotalTransitos = ultimos100.Count,
+
+                TransitosPorCabina = ultimos100
                     .GroupBy(t => t.IdCabina)
                     .ToDictionary(g => g.Key, g => g.Count()),
 
-                TransitosPorDia = transitos
+                TransitosPorDia = ultimos100
                     .GroupBy(t => DateTime.Parse(t.FechaOcurrencia).ToString("yyyy-MM-dd"))
                     .ToDictionary(g => g.Key, g => g.Count()),
 
-                TransitosPorHora = transitos
+                TransitosPorHora = ultimos100
                     .GroupBy(t => DateTime.Parse(t.FechaOcurrencia).ToString("HH"))
                     .ToDictionary(g => g.Key, g => g.Count()),
 
-                VelocidadPromedioPorCabina = transitos
+                VelocidadPromedioPorCabina = ultimos100
                     .Where(t => t.VelocidadKmh.HasValue)
                     .GroupBy(t => t.IdCabina)
                     .ToDictionary(
@@ -165,13 +182,14 @@
                         g => g.Average(t => t.VelocidadKmh!.Value)
                     ),
 
-                TransitosPorTipoVehiculo = transitos
+                TransitosPorTipoVehiculo = ultimos100
                     .GroupBy(t => t.TipoVehiculo)
                     .ToDictionary(g => g.Key, g => g.Count())
             };
 
             return estadisticas;
         }
+
     }
 
 }
