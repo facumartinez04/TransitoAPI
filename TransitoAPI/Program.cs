@@ -55,6 +55,8 @@ app.UseSwaggerUI();
 
 app.UseCors("AllowDashboard");
 
+app.UseStaticFiles();
+
 
 app.MapHub<TrafficHub>("/trafficHub");
 
