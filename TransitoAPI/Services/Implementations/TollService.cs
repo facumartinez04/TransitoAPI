@@ -2,9 +2,12 @@
 {
     using Newtonsoft.Json;
     using System.Net.Http.Json;
+    using System.Text.Json;
     using System.Text.Json.Serialization;
     using TransitoAPI.Models;
     using TransitoAPI.Services.Interfaces;
+
+
 
     public class TollService : ITollService
     {
@@ -15,16 +18,11 @@
             _http = http;
         }
 
-   
-        public async Task<List<CabinaPeaje>> ObtenerCabinasAsync()
-        {
-            var res = await _http.GetFromJsonAsync<RespuestaCabinas>("/api/toll_gates");
-            return res?.Datos ?? new();
-        }
+
 
         public async Task<CabinaPeaje> CrearCabinaAsync(CabinaCrearDto dto)
         {
-            var id =  Guid.NewGuid();
+            var id = Guid.NewGuid();
 
             var body = new
             {
@@ -140,20 +138,55 @@
         }
 
 
-        public async Task<EstadisticasTransito> ObtenerEstadisticasAsync()
+
+        public async Task<List<CabinaPeaje>> ObtenerCabinasAsync()
         {
             using var client = new HttpClient();
 
-            var url = "https://fun-bernetta-johannson-systems-v2-ba75677f.koyeb.app/api/transits?order_dir=asc&gate_id=11111111-1111-1111-1111-111111111111";
+            var url = "https://transitoapi.fmartinez.space/api/Toll/cabinas";
 
             var response = await client.GetAsync(url);
             response.EnsureSuccessStatusCode();
 
             var json = await response.Content.ReadAsStringAsync();
 
-            var transitos = JsonConvert.DeserializeObject<List<Transito>>(json) ?? new List<Transito>();
+            var cabinas = System.Text.Json.JsonSerializer.Deserialize<List<CabinaPeaje>>(json);
 
-            var ultimos100 = transitos
+            return cabinas ?? new List<CabinaPeaje>();
+        }
+
+
+        public async Task<EstadisticasTransito> ObtenerEstadisticasAsync()
+        {
+            using var client = new HttpClient();
+
+            var cabinas = await ObtenerCabinasAsync();
+
+            var todosLosTransitos = new List<Transitotat>();
+
+            foreach (var cabina in cabinas)
+            {
+                var url =
+                    $"https://fun-bernetta-johannson-systems-v2-ba75677f.koyeb.app/api/transits?order_dir=asc&gate_id={cabina.Id}";
+
+                var response = await client.GetAsync(url);
+                if (!response.IsSuccessStatusCode) continue;
+
+                var json = await response.Content.ReadAsStringAsync();
+
+                var apiResponse = JsonConvert.DeserializeObject<ApiResponse<Transitotat>>(json);
+
+                if (apiResponse?.Data != null)
+                    todosLosTransitos.AddRange(apiResponse.Data);
+            }
+
+            var transitosValidos = todosLosTransitos
+                .Where(t =>
+                    !string.IsNullOrWhiteSpace(t.FechaOcurrencia) &&
+                    DateTime.TryParse(t.FechaOcurrencia, out _))
+                .ToList();
+
+            var ultimos100 = transitosValidos
                 .OrderByDescending(t => DateTime.Parse(t.FechaOcurrencia))
                 .Take(100)
                 .ToList();
@@ -189,7 +222,6 @@
 
             return estadisticas;
         }
-
     }
-
 }
+

@@ -1,44 +1,44 @@
-﻿using System.Text.Json.Serialization;
+﻿using Newtonsoft.Json;
 
 namespace TransitoAPI.Models
 {
     public class Transito
     {
-        [JsonPropertyName("transit_id")]
+        [JsonProperty("transit_id")]
         public Guid IdTransito { get; set; }
 
-        [JsonPropertyName("capture_ref")]
+        [JsonProperty("capture_ref")]
         public string ReferenciaCaptura { get; set; }
 
-        [JsonPropertyName("gate_id")]
+        [JsonProperty("gate_id")]
         public Guid IdCabina { get; set; }
 
 
         [JsonIgnore]
-        [JsonPropertyName("event_id")]
+        [JsonProperty("event_id")]
         public Guid? IdEvento { get; set; }
 
         [JsonIgnore]
-        [JsonPropertyName("trace_id")]
+        [JsonProperty("trace_id")]
         public Guid? IdTrazabilidad { get; set; }
 
-        [JsonPropertyName("vehicle_plate")]
+        [JsonProperty("vehicle_plate")]
         public string PatenteVehiculo { get; set; }
 
-        [JsonPropertyName("vehicle_type")]
+        [JsonProperty("vehicle_type")]
         public string TipoVehiculo { get; set; }
 
-        [JsonPropertyName("speed_kmh")]
+        [JsonProperty("speed_kmh")]
         public decimal? VelocidadKmh { get; set; }
 
-        [JsonPropertyName("created_at")]
+        [JsonProperty("created_at")]
         public string FechaCreacion { get; set; } = DateTime.UtcNow.ToString("o");
 
-        [JsonPropertyName("occurred_at")]
+        [JsonProperty("occurred_at")]
         public string FechaOcurrencia { get; set; }
 
         [JsonIgnore]
-        [JsonPropertyName("updated_at")]
+        [JsonProperty("updated_at")]
         public string? FechaActualizacion { get; set; }
     }
 }
