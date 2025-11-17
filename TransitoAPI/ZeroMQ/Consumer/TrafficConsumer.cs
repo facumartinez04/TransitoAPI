@@ -3,6 +3,7 @@ using NetMQ;
 using NetMQ.Sockets;
 using System.Text.Json;
 using TransitoAPI.Models;
+using TransitoAPI.Rabbit;
 using TransitoAPI.Services.Interfaces;
 
 namespace TransitoAPI.ZeroMQ.Consumer
@@ -12,15 +13,19 @@ namespace TransitoAPI.ZeroMQ.Consumer
         private readonly IHubContext<TrafficHub> _hub;
         private readonly ITollService _tollService;
         private readonly EventQueueService _queue;
+        private readonly RabbitMqPublisher _publisher;
 
 
-        public TrafficConsumer(IHubContext<TrafficHub> hub, ITollService tollService, EventQueueService queue)
+        public TrafficConsumer(
+    IHubContext<TrafficHub> hub,
+    ITollService tollService,
+    EventQueueService queue,
+    RabbitMqPublisher publisher)
         {
-            {
-                _hub = hub;
-                _tollService = tollService;
-                _queue = queue;
-            }
+            _hub = hub;
+            _tollService = tollService;
+            _queue = queue;
+            _publisher = publisher;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -76,6 +81,18 @@ namespace TransitoAPI.ZeroMQ.Consumer
                     VelocidadKmh = data.speed_kmh,
                     ReferenciaCaptura = data.capture_ref
                 };
+
+                _publisher.PublishLanePassage(new
+                {
+                    event_id = Guid.NewGuid(),
+                    toll_id = dto.IdCabina.ToString(),
+                    lane_id = "N/A",
+                    timestamp_utc = DateTime.UtcNow.ToString("o"),
+                    plate_raw = dto.PatenteVehiculo,
+                    vehicle_class_hint = dto.TipoVehiculo,
+                    source = "lpr"
+
+                });
 
                 _queue.Cola.Enqueue(dto); 
 

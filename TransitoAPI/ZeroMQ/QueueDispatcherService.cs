@@ -30,6 +30,8 @@ namespace TransitoAPI.ZeroMQ
                     catch (Exception ex)
                     {
                         Console.WriteLine("❌ Error enviando tránsito: " + ex.Message);
+
+
                         _queue.Cola.Enqueue(dto);
                     }
                 }

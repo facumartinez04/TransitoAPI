@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using TransitoAPI.Rabbit;
 using TransitoAPI.Services.Implementations;
 using TransitoAPI.Services.Interfaces;
 using TransitoAPI.Services.Simulacion;
@@ -30,6 +31,7 @@ builder.Services.AddSignalR();
 
 
 builder.Services.AddSingleton<SimuladorService>();
+builder.Services.AddSingleton<RabbitMqPublisher>();
 
 builder.Services.AddHostedService<TrafficConsumer>();
 builder.Services.AddSingleton<EventQueueService>();

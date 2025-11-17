@@ -2,6 +2,7 @@
 {
     using Microsoft.AspNetCore.Mvc;
     using TransitoAPI.Models;
+    using TransitoAPI.Rabbit;
     using TransitoAPI.Services.Interfaces;
 
     [ApiController]
@@ -15,6 +16,22 @@
             _service = service;
         }
 
+        [HttpGet("test-rabbit")]
+        public IActionResult TestRabbit([FromServices] RabbitMqPublisher pub)
+        {
+            pub.PublishLanePassage(new
+            {
+                event_id = Guid.NewGuid(),
+                toll_id = "TEST-TOLL",
+                lane_id = "L-01",
+                timestamp_utc = DateTime.UtcNow.ToString("o"),
+                plate_raw = "TEST123",
+                vehicle_class_hint = "car",
+                source = "unit-test"
+            });
+
+            return Ok("Evento enviado al bus de datos.");
+        }
 
 
         [HttpGet("cabinas")]
